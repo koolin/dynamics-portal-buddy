@@ -1,0 +1,181 @@
+@model WebApp.Extensions.AzureAdB2CJwtOptions
+
+@{
+    Layout = null;
+}
+
+<script>
+    var DynPCA = {
+        Uri: document.getElementById("dynpca-uri").value,
+        UserId: document.getElementById("dynpca-userId").value,
+        WebsiteId: document.getElementById("dynpca-websiteId").value,
+        NewGuid: function () {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+	};
+
+    DynPCA.Loader = {
+        LoadScripts: function (scripts, callback) {
+            var script = scripts.shift();
+            var el = document.createElement('script');
+            $('body').append(el);
+            el.onload = function (scriptEvent) {
+                console.log(scriptEvent.target.src + ' loaded');
+                if (scripts.length) {
+                    DynPCA.Loader.LoadScripts(scripts, callback);
+                }
+                else {
+                    if (callback !== undefined) {
+                        console.log('initializing callback...');
+                        callback();
+                    }
+                }
+            };
+            el.src = script;
+        },
+
+        LoadStyleSheets: function (styles, callback) {
+            var style = styles.shift();
+            var el = document.createElement('link');
+            $('head').append(el);
+            el.onload = function (styleEvent) {
+                console.log(styleEvent.target.href + ' loaded');
+                if (styles.length) {
+                    DynPCA.Loader.LoadStyleSheets(styles, callback);
+                }
+                else {
+                    if (callback !== undefined) {
+                        console.log('initializing callback...');
+                        callback();
+                    }
+                }
+            };
+            el.href = style;
+            el.rel = "stylesheet";
+        }
+    }
+
+    DynPCA.Auth = {
+        Params: {
+            ClientId: '@Model.ClientId',
+            Authority: '@Model.Authority',
+            ApiUrl: '@Model.ApiUrl',
+            Tenant: '@Model.Tenant',
+            Policy: '@Model.DefaultPolicy',
+            RedirectUri: '@Model.RedirectUri',
+            ApiScopes: @Html.Raw(@Model.ApiScopes),
+        },
+        Client: '',
+        Init: function () {
+            console.log("PBAL Auth Initializing");
+            DynPCA.Auth.Client = new CC.CORE.PBAL.AppTokenFactory(
+                DynPCA.Auth.Params.ClientId,
+                DynPCA.Auth.Params.Tenant,
+                DynPCA.Auth.Params.ApiScopes,
+                DynPCA.Auth.Params.Policy,
+                DynPCA.UserId,
+                DynPCA.Auth.Params.RedirectUri,
+                DynPCA.Uri);
+            console.log("PBAL Auth Initialized");
+        },
+        GetHeaders: function (token, additionalHeaders) {
+            var ajaxHeaders = {};
+
+            // check token for error
+            if (token !== null) {
+                ajaxHeaders = {
+                    'Authorization': 'Bearer ' + token
+                };
+            } else {
+                console.log("token object null or missing, not including authoriztion header");
+            }
+
+            // add additional headers if they exist
+            if (typeof additionalHeaders === "object") {
+                jQuery.extend(ajaxHeaders, additionalHeaders);
+            }
+
+            return ajaxHeaders;
+        }
+
+    }
+
+    DynPCA.App = {
+        BaseScripts: [
+            DynPCA.Uri + '/js/pbal/pbal.js'
+        ],
+        Init: function () {
+            console.log("Dynamics Portal Companion App Initializing");
+            
+            console.log("Dynamics Portal Companion App Initialized");
+        },
+        ExecuteRequest: function (type, data, dataType, processData, queryPath, additionalHeaders, async, requestKind) {
+            var deferred = jQuery.Deferred();
+
+            DynPCA.Auth.Client.GetToken().always(function (accessToken) {
+                if (requestKind == 'xml') {
+                    DynPCA.App.ExecuteXmlRequest(type, data, responseType, async, queryPath, additionalHeaders, accessToken).then(function (data) {
+                        deferred.resolve(data);
+                    });
+                } else {
+                    DynPCA.App.ExecuteAjaxRequest(type, data, dataType, processData, queryPath, additionalHeaders, accessToken).then(function (data) {
+                        deferred.resolve(data);
+                    });
+                }
+            });
+
+            return deferred.promise();
+        },
+        ExecuteAjaxRequest: function (type, data, dataType, processData, queryPath, additionalHeaders, token) {
+            var deferred = jQuery.Deferred();
+            var ajaxHeaders = DynPCA.Auth.Client.GetHeaders(token, additionalHeaders);
+
+            jQuery.ajax({
+                method: type,
+                url: DynPCA.Uri + queryPath,
+                data: data,
+                dataType: dataType,
+                processData: processData,
+                headers: ajaxHeaders,
+                success: function (responseData) {
+                    deferred.resolve(responseData);
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    deferred.reject({
+                        xhr: jqXHR,
+                        text: textStatus,
+                        error: errorThrown
+                    });
+                }
+            });
+
+            return deferred.promise();
+        },
+        ExecuteXmlRequest: function (type, data, responseType, async, queryPath, additionalHeaders, token) {
+            var deferred = jQuery.Deferred();
+            var ajaxHeaders = DynPCA.Auth.Client.GetHeaders(token, additionalHeaders);
+
+            var xhr = new XMLHttpRequest();
+            xhr.open(type, DynPCA.Uri + queryPath, async);
+            xhr.responseType = responseType;
+
+            for (var key in ajaxHeaders) {
+                xhr.setRequestHeader(key, ajaxHeaders[key]);
+            }
+
+            xhr.onreadystatechange = function (oEvent) {
+                if (xhr.readyState === 4) {
+                    deferred.resolve(this);
+                }
+            };
+
+            xhr.send();
+            return deferred.promise();``
+        }
+    }
+
+    DynPCA.Loader.LoadScripts(DynPCA.App.BaseScripts, DynPCA.Auth.Init);
+</script>

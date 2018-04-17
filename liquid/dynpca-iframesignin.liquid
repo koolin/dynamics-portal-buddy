@@ -1,0 +1,21 @@
+{% assign ConnectWebUrl = ConnectWebUrl %}
+<!--
+ConnectWebUrl Parameter: {{ConnectWebUrl}}
+-->
+<style>
+    #content {
+        display: none;
+    }
+</style>
+<script>
+    var url = '{{ConnectWebUrl}}';
+    if (url == '') {
+      url = '{{ settings["ConnectWeb/DefaultUrl"] }}';
+    }
+    var provider = '{{ settings["Authentication/OpenIdConnect/AzureADB2C/AuthenticationType"] }}';
+    var redirect = url + "/Account/Login?returnUrl=https%3A%2F%2F" + window.location.hostname +
+        "%2FAccount%2FLogin%2FExternalLogin%3Fprovider%3D" + provider + "%26returnUrl%3D{{ request.params['returnUrl'] | url_escape }}";
+
+    console.log(redirect);
+    window.location = redirect;
+</script>
