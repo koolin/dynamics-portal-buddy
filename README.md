@@ -20,6 +20,8 @@ Token - /_services/Auth/Token
 The following Dynamics 365 portal site settings are required to initilize the portal STS auth:
 * `DynPCA/Auth/Type` - valid setting values are 'dyn365portal' for portal STS or 'aadb2c' for Azure AD B2C NOTE: *if the site setting does not exist then authentication will default to 'aadb2c'*
 
+##### working as of 9.0.9.7 of Dynamics 365 portals
+
 Existing documentation of Dynamics Portal Companion App continues as previously below...
 
 #### *BETA RELEASE*
@@ -73,7 +75,7 @@ To build the project, ensure that you have [Git](https://git-scm.com/downloads) 
   ```sh
   git clone https://github.com/Adoxio/dynamics-portal-companion-app.git
   ```
-- Open the `PortalBuddyWebApp.sln` solution file in Visual Studio
+- Open the `DynamicsPortalBuddy.sln` solution file in Visual Studio
 
 ## License
 
