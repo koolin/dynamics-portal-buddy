@@ -17,6 +17,10 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.Net;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Org.BouncyCastle.Security;
+using Org.BouncyCastle.Crypto.Parameters;
+using System.Security.Cryptography;
+using System;
 
 namespace WebApp
 {
@@ -58,6 +62,7 @@ namespace WebApp
 
             services.Configure<AzureAdB2CJwtOptions>(Configuration.GetSection("Authentication:AzureADB2C-JWT"));
             services.Configure<AzureAdB2COidcOptions>(Configuration.GetSection("Authentication:AzureADB2C-OIDC"));
+            services.Configure<Dyn365portalAuthOptions>(Configuration.GetSection("Authentication:Dyn365portal"));
 
             services.AddSingleton<CrmCoreServiceClient>();
 
@@ -72,7 +77,7 @@ namespace WebApp
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory, IOptions<AzureAdB2COidcOptions> azureAdB2COidcOptions, IOptions<AzureAdB2CJwtOptions> azureAdB2CJwtOptions)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory, IOptions<AzureAdB2COidcOptions> azureAdB2COidcOptions, IOptions<AzureAdB2CJwtOptions> azureAdB2CJwtOptions, IOptions<Dyn365portalAuthOptions> dyn365portalAuthOptions)
         {
             loggerFactory.AddConsole(Configuration.GetSection("Logging"));
             loggerFactory.AddDebug();
@@ -149,6 +154,52 @@ namespace WebApp
                     {
                         return Task.FromResult(0);
                     },
+                }
+            });
+
+            // Setup Dyn365 portal OAuth/JWT Bearer Authentication
+            var audUri = new Uri(dyn365portalAuthOptions.Value.Uri);
+            var keyBytes = Convert.FromBase64String(dyn365portalAuthOptions.Value.PublicKey);
+            var asymmetricKeyParameter = PublicKeyFactory.CreateKey(keyBytes);
+            var rsaKeyParameters = (RsaKeyParameters)asymmetricKeyParameter;
+            var rsaParameters = new RSAParameters()
+            {
+                Modulus = rsaKeyParameters.Modulus.ToByteArrayUnsigned(),
+                Exponent = rsaKeyParameters.Exponent.ToByteArrayUnsigned()
+            };
+            var rsaSp = new RSACryptoServiceProvider();
+            rsaSp.ImportParameters(rsaParameters);
+
+            app.UseJwtBearerAuthentication(new JwtBearerOptions
+            {
+                IncludeErrorDetails = true,
+                Events = new JwtBearerEvents
+                {
+                    OnAuthenticationFailed = context =>
+                    {
+                        return Task.FromResult(0);
+                    },
+                    OnChallenge = context =>
+                    {
+                        return Task.FromResult(0);
+                    },
+                    OnMessageReceived = context =>
+                    {
+                        return Task.FromResult(0);
+                    },
+                    OnTokenValidated = context =>
+                    {
+                        return Task.FromResult(0);
+                    },
+                },
+                TokenValidationParameters = new TokenValidationParameters
+                {
+                    IssuerSigningKey = new RsaSecurityKey(rsaSp),
+                    ValidateAudience = false,
+                    ValidateIssuer = true,
+                    ValidIssuer = audUri.Host,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = false
                 }
             });
 
