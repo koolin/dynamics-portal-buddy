@@ -3,7 +3,7 @@
     "windowsAuthentication": false,
     "anonymousAuthentication": true,
     "iis": {
-      "applicationUrl": "https://dynpca.local.adoxio.com/",
+      "applicationUrl": "https://portalbuddy.local.adoxio.com/",
       "sslPort": 0
     },
     "iisExpress": {

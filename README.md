@@ -2,7 +2,7 @@
 
 Portal Buddy is the original name of the Dynamics Portal Companion App but rolls of the tounge a bit better.  
 
-This release adds the Bouncy Castle authentication which is an STS that has been present in the Dynamics 365 portal since the implementation of the CafeX chat client.  This STS does not conform to all Secure Token Service standards and thus has not been documented so suggested for use even though discovered and functional since February 2016.  This branch is a release of that original code so that portal buddy can function without Azure AD B2C and works directly with the portal regardless of the choosen authentication.  This brings the complexity of implementation significantly down and is expected to be documented as the extensibility store directly from Microsoft.
+This release adds the Bouncy Castle authentication which is an STS that has been present in the Dynamics 365 portal since the implementation of the CafeX chat client.  This STS does not conform to all Secure Token Service standards and thus has not been documented so suggested for use even though discovered and functional since February 2016.  This branch is a release of that original code so that portal buddy can function without Azure AD B2C and works directly with the portal regardless of the chosen authentication.  This brings the complexity of implementation significantly down and is expected to be documented as the extensibility store directly from Microsoft.
 
 Documentation of Bouncy Castle authentication will be added as code is added.
 
