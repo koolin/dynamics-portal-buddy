@@ -6,15 +6,19 @@ This release adds the Bouncy Castle authentication which is an STS that has been
 
 Documentation of Bouncy Castle authentication is in progress...
 
-#### *Appsettings update*
+#### Appsettings update
 
 public key can be retrived from:
 https://[portalname].microsoftcrmportals.com/_services/auth/publickey
 
-#### *Bouncy Castle Auth STS endpoints*
+#### Dynamics 365 portal Auth STS endpoints
 
 Authorize - /_services/Auth/Authorize
 Token - /_services/Auth/Token
+
+#### Dynamics 365 portal Auth Site Settings
+The following Dynamics 365 portal site settings are required to initilize the portal STS auth:
+* `DynPCA/Auth/Type` - valid setting values are 'dyn365portal' for portal STS or 'aadb2c' for Azure AD B2C NOTE: *if the site setting does not exist then authentication will default to 'aadb2c'*
 
 Existing documentation of Dynamics Portal Companion App continues as previously below...
 
