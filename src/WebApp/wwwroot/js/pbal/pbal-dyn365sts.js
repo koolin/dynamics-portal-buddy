@@ -107,8 +107,20 @@ CC.CORE.Cache = (function () {
 
     var clear = function (key) {
         var cache = getCacheObject();
-        cache.removeItem(key);
-        cache.removeItem(getExpiryKey(key));
+        if (key) {
+            cache.removeItem(key);
+            cache.removeItem(getExpiryKey(key));
+        } else {
+            var keys = [];
+            for (var i = 0; i < cache.length; i++) {
+                if (cache.key(i).indexOf("candc_cache_PBAL") >= 0) {
+                    keys.push(cache.key(i));
+                }
+            }
+            for (var j = 0; j < keys.length; j++) {
+                cache.removeItem(keys[j]);
+            }
+        }
     };
 
     return {
@@ -131,14 +143,14 @@ CC.CORE.Log = function (errMsg) {
     }
 };
 
-CC.CORE.ABSAL = (function () {
+CC.CORE.PBAL = (function () {
     "use strict";
 
-    var appTokenFactory = function (aadAppClientId, tenant, b2cScope, b2cPolicy, userId, redirectUrl, connectUrl) {
+    var appTokenFactory = function (aadAppClientId, tenant, b2cScope, b2cPolicy, userId, redirectUrl) {
         // NOTE on security: include the userId in the cache key to prevent the case where a user logs out but
         // leaves the tab open and a new user logs in on the same tab. The first user's calender
         // would be returned if we didn't associate the cache key with the current user.
-        var cacheKey = "candc_cache_ABSAL_" + userId + "_" + aadAppClientId;
+        var cacheKey = "candc_cache_PBAL_" + userId + "_" + aadAppClientId;
 
         this.params = {
             clientId: aadAppClientId,
@@ -147,13 +159,12 @@ CC.CORE.ABSAL = (function () {
             cacheKey: cacheKey,
             scope: b2cScope,
             policy: b2cPolicy,
-            oid: userId,
-            connectUrl: connectUrl
+            oid: userId
         };
 
         var getAuthorizeUri = function (params, redirectUrl) {
             var authUri = params.redirectUrl + "/_services/auth/authorize?" +
-                "&response_type=token" +
+                "response_type=token" +
                 "&redirect_uri=" + encodeURIComponent(redirectUrl + "blank.gif");
             return authUri;
         };
@@ -178,7 +189,7 @@ CC.CORE.ABSAL = (function () {
                 height: 1,
                 src: getAuthorizeUri(params, params.redirectUrl),
                 style: 'visibility: hidden;'
-            })
+            });
             jQuery(document.body).append(iframe);
 
             // bind event handler to iframe for parse query string on load
@@ -210,7 +221,7 @@ CC.CORE.ABSAL = (function () {
             var expiresInSeconds = 3600; // getQueryStringParameterByName("expires_in", frameHref);
             var state = getQueryStringParameterByName("state", frameHref);
             var type = "Bearer"; // getQueryStringParameterByName("token_type", frameHref);
-
+            
             var response = {
                 accessToken: accessToken,
                 expiresInSeconds: expiresInSeconds,
@@ -234,20 +245,20 @@ CC.CORE.ABSAL = (function () {
             deferred.resolve(response);
         };
 
-        var getHeaders = function (token, additionalHeaders) {
+        this.GetHeaders = function (token, additionalHeaders) {
             var ajaxHeaders = {};
 
             // check token for error
             if (token.error !== null) {
-                CC.CORE.Log("token error detected: " + token.error + " | not including authoriztion header");
+                CC.CORE.Log("PBAL: token error detected: " + token.error + " | not including authoriztion header");
             } else if (token.tokenType !== null && token.accessToken !== null) {
-                CC.CORE.Log("token detected: " + token.tokenType + " | adding authoriztion header");
+                CC.CORE.Log("PBAL: token detected: " + token.tokenType + " | adding authoriztion header");
 
                 ajaxHeaders = {
                     'Authorization': token.tokenType + ' ' + token.accessToken
                 };
             } else {
-                CC.CORE.Log("token object attributes missing | not including authoriztion header");
+                CC.CORE.Log("PBAL: token object attributes missing | not including authoriztion header");
             }
 
             // add additional headers if they exist
@@ -256,7 +267,7 @@ CC.CORE.ABSAL = (function () {
             }
 
             return ajaxHeaders;
-        }
+        };
 
         // get the most recent token from the cache, or if not available,
         // fetch a new token via iframe
@@ -265,10 +276,13 @@ CC.CORE.ABSAL = (function () {
 
             var params = this.params;
 
-            if (params.oid == "") {
+            if (params.oid === "" || params.oid === null) {
+                // clear cache to avoid stale access tokens being available
+                CC.CORE.Log("PBAL: clear cache");
+                CC.CORE.Cache.Clear();
                 deferred.reject({
                     error: "no user detected",
-                    errorDescription: "user id in connect 365 hidden input was null or not found"
+                    errorDescription: "user id in Portal hidden input was null or not found"
                 });
                 return deferred.promise();
             }
@@ -279,7 +293,7 @@ CC.CORE.ABSAL = (function () {
                 // fetch token via iframe
                 acquirePassiveToken(params)
                     .done(function (tokenFromIframe) {
-                        CC.CORE.Log("ABSAL: Fetched token from iframe.");
+                        CC.CORE.Log("PBAL: Fetched token from iframe.");
                         // expire cache a minute before token expires to be safe
                         var cacheTimeout = (tokenFromIframe.expiresInSeconds - 60) * 1000;
                         CC.CORE.Cache.Set(params.cacheKey, tokenFromIframe, cacheTimeout);
@@ -292,70 +306,15 @@ CC.CORE.ABSAL = (function () {
                     });
             }
             else {
-                CC.CORE.Log("ABSAL: Fetched token from cache.");
+                CC.CORE.Log("PBAL: Fetched token from cache.");
                 // resolve the promise
                 deferred.resolve(tokenFromCache);
             }
             return deferred.promise();
         };
-
-        this.ExecuteAjaxRequest = function (type, data, dataType, processData, queryPath, additionalHeaders) {
-            var deferred = jQuery.Deferred();
-            var params = this.params;
-
-            this.GetToken().always(function (token) {
-                var ajaxHeaders = getHeaders(token, additionalHeaders);
-
-                jQuery.ajax({
-                    method: type,
-                    url: params.connectUrl + queryPath,
-                    data: data,
-                    dataType: dataType,
-                    processData: processData,
-                    headers: ajaxHeaders,
-                    success: function (responseData) {
-                        deferred.resolve(responseData);
-                    },
-                    error: function (jqXHR, textStatus, errorThrown) {
-                        deferred.reject({
-                            xhr: jqXHR,
-                            text: textStatus,
-                            error: errorThrown
-                        });
-                    }
-                });
-            });
-
-            return deferred.promise();
-        };
-
-        this.ExecuteXmlHttpRequest = function (type, data, responseType, async, queryPath, additionalHeaders) {
-            var deferred = jQuery.Deferred();
-            var params = this.params;
-
-            this.GetToken().always(function (token) {
-                var ajaxHeaders = getHeaders(token, additionalHeaders);
-
-                var xhr = new XMLHttpRequest();
-                xhr.open(type, params.connectUrl + queryPath, async);
-                xhr.responseType = responseType;
-
-                for (var key in ajaxHeaders) {
-                    xhr.setRequestHeader(key, ajaxHeaders[key]);
-                }
-
-                xhr.onreadystatechange = function (oEvent) {
-                    if (xhr.readyState === 4) {
-                        deferred.resolve(this);
-                    }
-                };
-
-                xhr.send();
-            });
-
-            return deferred.promise();
-        };
     };
+
+    CC.CORE.Log("PBAL Dynamaics 365 portal token factory loaded");
 
     return {
         AppTokenFactory: appTokenFactory

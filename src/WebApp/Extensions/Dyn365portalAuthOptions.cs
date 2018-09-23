@@ -15,5 +15,7 @@ namespace WebApp.Extensions
 
         public string Token => $"{Uri}/_services/Auth/Token";
 
+        public string RedirectUri => Uri;
+
     }
 }

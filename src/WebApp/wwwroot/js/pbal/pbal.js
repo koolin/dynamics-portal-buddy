@@ -117,8 +117,8 @@ CC.CORE.Cache = (function () {
                     keys.push(cache.key(i));
                 }
             }
-            for (var i = 0; i < keys.length; i++) {
-                cache.removeItem(keys[i]);
+            for (var j = 0; j < keys.length; j++) {
+                cache.removeItem(keys[j]);
             }
         }
     };
@@ -197,7 +197,7 @@ CC.CORE.PBAL = (function () {
                 height: 1,
                 src: getAuthorizeUri(params, params.redirectUrl),
                 style: 'visibility: hidden;'
-            })
+            });
             jQuery(document.body).append(iframe);
 
             // bind event handler to iframe for parse query string on load
@@ -275,7 +275,7 @@ CC.CORE.PBAL = (function () {
             }
 
             return ajaxHeaders;
-        }
+        };
 
         // get the most recent token from the cache, or if not available,
         // fetch a new token via iframe
@@ -284,7 +284,7 @@ CC.CORE.PBAL = (function () {
 
             var params = this.params;
 
-            if (params.oid == "" || params.oid == null) {
+            if (params.oid === "" || params.oid === null) {
                 // clear cache to avoid stale access tokens being available
                 CC.CORE.Log("PBAL: clear cache");
                 CC.CORE.Cache.Clear();
@@ -322,7 +322,7 @@ CC.CORE.PBAL = (function () {
         };
     };
 
-    CC.CORE.Log("token factory loaded");
+    CC.CORE.Log("PBAL Azure AD B2C token factory loaded");
 
     return {
         AppTokenFactory: appTokenFactory

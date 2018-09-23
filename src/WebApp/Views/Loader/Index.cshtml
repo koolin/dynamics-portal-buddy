@@ -21,6 +21,7 @@
     DynPCA.Loader = {
         LoadScripts: function (scripts, callback) {
             var script = scripts.shift();
+            if (!script) return;
             var el = document.createElement('script');
             $('body').append(el);
             el.onload = function (scriptEvent) {
@@ -62,12 +63,11 @@
     DynPCA.Auth = {
         Params: {
             ClientId: '@Model.ClientId',
-            Authority: '@Model.Authority',
             ApiUrl: '@Model.ApiUrl',
             Tenant: '@Model.Tenant',
             Policy: '@Model.DefaultPolicy',
             RedirectUri: '@Model.RedirectUri',
-            ApiScopes: @Html.Raw(@Model.ApiScopes),
+            ApiScopes: '@Html.Raw(@Model.ApiScopes)'
         },
         Client: '',
         Init: function () {
@@ -111,6 +111,7 @@
         Init: function () {
             console.log("Dynamics Portal Companion App Initializing");
 
+            // determine auth and load appropriate PBAL library
             switch (DynPCA.AuthType) {
                 case "aadb2c":
                     DynPCA.App.BaseScripts.push(DynPCA.Uri + '/js/pbal/pbal.js');
@@ -189,5 +190,6 @@
         }
     }
 
+    DynPCA.App.Init();
     DynPCA.Loader.LoadScripts(DynPCA.App.BaseScripts, DynPCA.Auth.Init);
 </script>
